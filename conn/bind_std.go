@@ -46,6 +46,14 @@ type StdNetBind struct {
 
 	blackhole4 bool
 	blackhole6 bool
+
+	receiverCreator ReceiverCreator
+}
+
+func NewStdNetBindWithReceiverCreator(receiverCreator ReceiverCreator) *StdNetBind {
+	b, _ := NewStdNetBind().(*StdNetBind)
+	b.receiverCreator = receiverCreator
+	return b
 }
 
 func NewStdNetBind() Bind {
@@ -179,7 +187,12 @@ again:
 			v4pc = ipv4.NewPacketConn(v4conn)
 			s.ipv4PC = v4pc
 		}
-		fns = append(fns, s.makeReceiveIPv4(v4pc, v4conn, s.ipv4RxOffload))
+		if s.receiverCreator != nil {
+			// Todo: check if this still works
+			fns = append(fns, s.receiverCreator.CreateIPv4ReceiverFn(v4pc, v4conn, s.ipv4RxOffload, &s.msgsPool))
+		} else {
+			fns = append(fns, s.makeReceiveIPv4(v4pc, v4conn, s.ipv4RxOffload))
+		}
 		s.ipv4 = v4conn
 	}
 	if v6conn != nil {
